@@ -1,0 +1,35 @@
+name: Backup Djeva
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1-5"
+
+jobs:
+  start_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codes
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.6"
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Start Backup
+        run: python main.py
+      - name: Update Djeva
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "update Djeva $(date +'%B %d, %Y %T (%Z)')"
+            git push origin $(git branch --show-current)
+          else
+            echo "Oops, seems push failed!"
+            exit 1
+          fi
