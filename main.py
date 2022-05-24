@@ -24,6 +24,7 @@ class Djeva():
         source_file = os.path.join(self._source_dir, self.date)
         json_file = os.path.join(self._json_dir, self.date)
         csv_file = os.path.join(self._csv_dir, self.date)
+        config_file = 'djeva'
 
         self.source_file = self.dump(
             'json',
@@ -37,13 +38,29 @@ class Djeva():
             'csv',
             filename=csv_file,
             data=self.items)
+        self.dump(
+            'config',
+            filename=config_file,
+            dir=self._source_dir)
 
     def dump(self, dtype: str, **kw):
         dump_ops = {
             'json': self._dump_json,
             'csv': self._dump_csv,
+            'config': self._dump_config,
         }
         return dump_ops[dtype](**kw)
+
+    def _dump_config(self, filename, dir):
+        cand_files = os.listdir(dir)
+        json_files = [file[:-5]
+                      for file in cand_files if file.endswith('json')]
+        json_files = {'data': json_files}
+        json_files = 'djeva=' + json.dumps(json_files)
+        filename = filename + '.js'
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(json_files)
+        return filename
 
     def _dump_json(self, filename, data):
         filename = filename + '.json'
