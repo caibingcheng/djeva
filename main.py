@@ -55,8 +55,20 @@ class Djeva():
         cand_files = os.listdir(dir)
         json_files = [file[:-5]
                       for file in cand_files if file.endswith('json')]
-        json_files = {'data': json_files}
-        json_files = 'djeva=' + json.dumps(json_files)
+        dates = {}
+        for patch in json_files:
+            year = patch.split('-')[0]
+            month = patch.split('-')[1]
+            day = patch.split('-')[2]
+            if year not in dates.keys():
+                dates[year] = {}
+            if month not in dates[year].keys():
+                dates[year][month] = []
+            dates[year][month].append(day)
+            dates[year][month] = sorted(dates[year][month])
+        json_files = {'data': dates}
+        json_files = 'function get_djeva(){return ' + \
+            json.dumps(json_files) + ';}'
         filename = filename + '.js'
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(json_files)
