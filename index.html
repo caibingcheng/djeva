@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJEVA</title>
+
+    <link rel="stylesheet" href="lib/gridmanager.css">
+    <script src="lib/gridmanager.js"></script>
+</head>
+
+<style>
+    .comment {
+        color: #7a7a7a;
+        font-size: 0.8rem;
+    }
+
+    .eva_low {
+        background-color: rgb(23, 195, 23);
+    }
+
+    select {
+        margin: 0.5rem 0;
+    }
+</style>
+
+<body>
+    <select name="trading_year" id="trading_year"></select> 年
+    <select name="trading_month" id="trading_month"></select> 月
+    <select name="trading_day" id="trading_day"></select> 日
+    <input type="button" value="查询">
+    <table></table>
+    <p class="comment">重要提示：投资有风险，估值数据仅供参考，不构成任何投资建议。</p>
+
+    <script type="text/javascript" src="djeva.js"></script>
+    <script>
+        var djeva = get_djeva();
+        let year_obj = document.querySelector("#trading_year");
+        let month_obj = document.querySelector("#trading_month");
+        let day_obj = document.querySelector("#trading_day");
+        let submit_obj = document.querySelector("body > input[type=button]");
+
+        function setDataList(id, datalist) {
+            let dl = document.getElementById(id);
+            for (var index in datalist) {
+                let option = document.createElement('option');
+                option.setAttribute('value', datalist[index]);
+                option.innerText = datalist[index];
+                dl.appendChild(option);
+            }
+        }
+
+        function sort_max(arr) {
+            return arr.sort(function (a, b) {
+                return a < b;
+            });
+        }
+
+        function year_select() {
+            let year = year_obj.value;
+            let month = Object.keys(djeva['data'][year]);
+            month = sort_max(month);
+            setDataList('trading_month', month);
+            month_obj.value = month[0];
+        }
+        function month_select() {
+            let year = year_obj.value;
+            let month = month_obj.value;
+            let day = djeva['data'][year][month];
+            day = sort_max(day);
+            setDataList('trading_day', day);
+            day_obj.value = day[0];
+        };
+
+        year_obj.onselect = year_select;
+        month_obj.onselect = month_select;
+        submit_obj.onclick = function () {
+            let year = year_obj.value;
+            let month = month_obj.value;
+            let day = day_obj.value;
+            query(year + '-' + month + '-' + day);
+        }
+
+        let years = Object.keys(djeva['data']);
+        years = sort_max(years);
+        setDataList('trading_year', years);
+        year_obj.value = years[0];
+        year_select();
+        month_select();
+        submit_obj.click();
+
+        function query(date) {
+            document.querySelector('table').GM({
+                gridManagerName: 'djeva',
+                ajaxData: 'https://raw.githubusercontent.com/caibingcheng/djeva/master/json/' + date + '.json',
+                responseHandler: function (response) {
+                    document.title = 'DJEVA ' + response[0]['date'];
+                    response = {
+                        'data': response,
+                        'totals': response.length
+                    };
+
+                    return response;
+                },
+                supportCheckbox: false,
+                supportAutoOrder: false,
+                supportDrag: false,
+                pageSizeKey: 'totals',
+                height: '100%',
+                columnData: [
+                    {
+                        key: 'index_code',
+                        text: '代码',
+                    }, {
+                        key: 'name',
+                        text: '名称',
+                    }, {
+                        key: 'eva_type',
+                        text: '估值',
+                        template: function (cell, row, index, key) {
+                            eva_type = {
+                                'low': '偏低',
+                                'mid': '适中',
+                                'high': '偏高',
+                                'unsort': '',
+                            };
+                            return eva_type[cell];
+                        },
+                    }, {
+                        key: 'pe',
+                        text: 'PE',
+                    }, {
+                        key: 'pe_percentile',
+                        text: 'PE百分位',
+                        template: function (cell, row, index, key) {
+                            return (cell * 100).toFixed(2) + '%';
+                        },
+                    }, {
+                        key: 'pb',
+                        text: 'PB',
+                    }, {
+                        key: 'pb_percentile',
+                        text: 'PB百分位',
+                        template: function (cell, row, index, key) {
+                            return (cell * 100).toFixed(2) + '%';
+                        },
+                    }, {
+                        key: 'roe',
+                        text: 'ROE',
+                        template: function (cell, row, index, key) {
+                            return (cell * 100).toFixed(2) + '%';
+                        },
+                    }, {
+                        key: 'yeild',
+                        text: '股息率',
+                        template: function (cell, row, index, key) {
+                            return (cell * 100).toFixed(2) + '%';
+                        },
+                    }, {
+                        key: 'peg',
+                        text: '预测PEG',
+                    },
+                ]
+            });
+        }
+    </script>
+
+</body>
+
+</html>
