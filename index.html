@@ -94,7 +94,7 @@
         function query(date) {
             document.querySelector('table').GM({
                 gridManagerName: 'djeva',
-                ajaxData: 'https://raw.githubusercontent.com/caibingcheng/djeva/master/json/' + date + '.json',
+                ajaxData: 'json/' + date + '.json',
                 responseHandler: function (response) {
                     document.title = 'DJEVA ' + response[0]['date'];
                     response = {
