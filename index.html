@@ -12,27 +12,113 @@
 </head>
 
 <style>
-    .comment {
-        color: #7a7a7a;
-        font-size: 0.8rem;
+    html,
+    body {
+        padding: 0 0;
+        margin: 0 5px;
     }
 
     .eva_low {
-        background-color: rgb(23, 195, 23);
+        color: rgb(23, 195, 23);
+    }
+
+    .eva_mid {
+        color: rgb(117, 119, 117);
+    }
+
+    .eva_high {
+        color: rgb(173, 17, 17);
+    }
+
+    .code_link {
+        text-decoration: none;
+        color: black;
+        font-weight: bolder;
     }
 
     select {
-        margin: 0.5rem 0;
+        color: black;
+        font-size: 16px;
+        background: #e8e8e8;
+        border: 2px solid #e8e8e8;
+        border-radius: 6px;
+        padding: 4px 6px;
+        text-align: center;
+        display: inline-block;
+        cursor: pointer;
+        text-decoration: none;
+        text-transform: uppercase;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    input[type='button'] {
+        color: black;
+        font-size: 12px;
+        background: #e8e8e8;
+        border: 2px solid #e8e8e8;
+        border-radius: 6px;
+        padding: 4px 16px;
+        text-align: center;
+        display: inline-block;
+        -webkit-transition-duration: 0.4s;
+        /* Safari */
+        transition-duration: 0.4s;
+        cursor: pointer;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+
+    input[type='button']:hover {
+        border: 2px solid #008CBA;
+        background-color: #008CBA;
+        color: white;
+    }
+
+    .comment {
+        color: #7a7a7a;
+        font-size: 0.8rem;
+        padding: 0 0;
+        margin: 0 0;
+    }
+
+    header {
+        line-height: 48px;
+        width: 100%;
+        padding: 0 0;
+        margin: 0 0;
+    }
+
+    main {
+        height: 100%;
+    }
+
+    footer {
+        position: fixed;
+        bottom: 0;
+        line-height: 32px;
+        width: 100%;
+        padding: 0 0;
+        margin: 0 0;
     }
 </style>
 
 <body>
-    <select name="trading_year" id="trading_year"></select> 年
-    <select name="trading_month" id="trading_month"></select> 月
-    <select name="trading_day" id="trading_day"></select> 日
-    <input type="button" value="查询">
-    <table></table>
-    <p class="comment">重要提示：投资有风险，估值数据仅供参考，不构成任何投资建议。</p>
+    <header>
+        <select name="trading_year" id="trading_year"></select> 年
+        <select name="trading_month" id="trading_month"></select> 月
+        <select name="trading_day" id="trading_day"></select> 日
+        <input type="button" value="查询">
+    </header>
+    <main>
+        <table></table>
+    </main>
+    <footer>
+        <p class="comment">重要提示：投资有风险，估值数据仅供参考，不构成任何投资建议。</p>
+    </footer>
+
 
     <script type="text/javascript" src="djeva.js"></script>
     <script>
@@ -40,7 +126,7 @@
         let year_obj = document.querySelector("#trading_year");
         let month_obj = document.querySelector("#trading_month");
         let day_obj = document.querySelector("#trading_day");
-        let submit_obj = document.querySelector("body > input[type=button]");
+        let submit_obj = document.querySelector("input[type=button]");
 
         function setDataList(id, datalist) {
             let dl = document.getElementById(id);
@@ -108,22 +194,24 @@
                 supportAutoOrder: false,
                 supportDrag: false,
                 pageSizeKey: 'totals',
-                height: '100%',
+                height: '100vh - 80px',
                 columnData: [
                     {
                         key: 'index_code',
                         text: '代码',
-                    }, {
-                        key: 'name',
-                        text: '名称',
+                        template: function (cell, row, index, key) {
+                            let link = 'https://danjuanapp.com/dj-valuation-table-detail/' + cell;
+                            let content = row['name'] + ' (' + cell + ')';
+                            return '<a class="code_link" href="' + link + '">' + content + '</a>';
+                        },
                     }, {
                         key: 'eva_type',
                         text: '估值',
                         template: function (cell, row, index, key) {
                             eva_type = {
-                                'low': '偏低',
-                                'mid': '适中',
-                                'high': '偏高',
+                                'low': '<span class="eva_low">偏低</span>',
+                                'mid': '<span class="eva_mid">适中</span>',
+                                'high': '<span class="eva_high">偏高</span>',
                                 'unsort': '',
                             };
                             return eva_type[cell];
