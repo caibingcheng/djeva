@@ -130,6 +130,7 @@
 
         function setDataList(id, datalist) {
             let dl = document.getElementById(id);
+            dl.innerHTML = "";
             for (var index in datalist) {
                 let option = document.createElement('option');
                 option.setAttribute('value', datalist[index]);
@@ -160,8 +161,8 @@
             day_obj.value = day[0];
         };
 
-        year_obj.onselect = year_select;
-        month_obj.onselect = month_select;
+        year_obj.onchange = year_select;
+        month_obj.onchange = month_select;
         submit_obj.onclick = function () {
             let year = year_obj.value;
             let month = month_obj.value;
