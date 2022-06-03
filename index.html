@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJEVA</title>
 
+    <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="lib/gridmanager.css">
     <script src="lib/gridmanager.js"></script>
 </head>
@@ -55,6 +56,7 @@
     }
 
     input[type='button'] {
+        display: none;
         color: black;
         font-size: 12px;
         background: #e8e8e8;
@@ -62,7 +64,7 @@
         border-radius: 6px;
         padding: 4px 16px;
         text-align: center;
-        display: inline-block;
+        /*  display: inline-block; */
         -webkit-transition-duration: 0.4s;
         /* Safari */
         transition-duration: 0.4s;
@@ -110,6 +112,8 @@
         <select name="trading_year" id="trading_year"></select> 年
         <select name="trading_month" id="trading_month"></select> 月
         <select name="trading_day" id="trading_day"></select> 日
+        <span id="trading_week"></span>
+        &nbsp;&nbsp;
         <input type="button" value="查询">
     </header>
     <main>
@@ -126,43 +130,65 @@
         let year_obj = document.querySelector("#trading_year");
         let month_obj = document.querySelector("#trading_month");
         let day_obj = document.querySelector("#trading_day");
+        let week_obj = document.querySelector("#trading_week");
         let submit_obj = document.querySelector("input[type=button]");
 
         function setDataList(id, datalist) {
             let dl = document.getElementById(id);
             dl.innerHTML = "";
             for (var index in datalist) {
-                let option = document.createElement('option');
-                option.setAttribute('value', datalist[index]);
-                option.innerText = datalist[index];
-                dl.appendChild(option);
+                dl.add(new Option(datalist[index], datalist[index]));
             }
         }
 
-        function sort_max(arr) {
+        function sortByKey(arr, key = "") {
+            if (typeof (arr) == "string")
+                arr = JSON.parse(arr);
             return arr.sort(function (a, b) {
-                return b - a;
+                if (key == "")
+                    return a - b;
+                return a[key] - b[key];
             });
         }
 
         function year_select() {
             let year = year_obj.value;
             let month = Object.keys(djeva['data'][year]);
-            month = sort_max(month);
+            month = sortByKey(month).reverse();
             setDataList('trading_month', month);
-            month_obj.value = month[0];
+            month_obj.options[0].selected = true;
+            month_obj.onchange();
         }
         function month_select() {
             let year = year_obj.value;
             let month = month_obj.value;
             let day = djeva['data'][year][month];
-            day = sort_max(day);
+            day = sortByKey(day).reverse();
             setDataList('trading_day', day);
-            day_obj.value = day[0];
+            day_obj.options[0].selected = true;
+            day_obj.onchange();
+        };
+        function day_select() {
+            let year = parseInt(year_obj.value);
+            let month = parseInt(month_obj.value);
+            let day = parseInt(day_obj.value);
+            let date = new Date(year, month - 1, day);
+            let week = {
+                0: "星期天",
+                1: "星期一",
+                2: "星期二",
+                3: "星期三",
+                4: "星期四",
+                5: "星期五",
+                6: "星期六",
+            };
+            week_obj.innerHTML = ' · ' + week[date.getDay()];
+            submit_obj.click();
         };
 
         year_obj.onchange = year_select;
         month_obj.onchange = month_select;
+        day_obj.onchange = day_select;
         submit_obj.onclick = function () {
             let year = year_obj.value;
             let month = month_obj.value;
@@ -171,17 +197,58 @@
         }
 
         let years = Object.keys(djeva['data']);
-        years = sort_max(years);
+        years = sortByKey(years).reverse();
         setDataList('trading_year', years);
-        year_obj.value = years[0];
-        year_select();
-        month_select();
-        submit_obj.click();
+        year_obj.options[0].selected = true;
+        year_obj.onchange();
+
+        function sortingData(data, query) {
+            let sortProps = "DESC";
+            let sortOrder = "";
+            Object.keys(query).forEach((key) => {
+                if (query[key] === "ASC" || query[key] === "DESC") {
+                    sortProps = key.split("_")[1];
+                    sortOrder = query[key];
+                }
+            });
+
+            return ((list, sortProps, sortOrder) => {
+                if (sortOrder === "ASC") {
+                    return sortByKey(list, sortProps);
+                }
+                if (sortOrder === "DESC") {
+                    return sortByKey(list, sortProps).reverse();
+                }
+                return list;
+            })(data, sortProps, sortOrder);
+        }
+
+        function getDJEvaList(params, url) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', url);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4) {
+                        return;
+                    }
+                    if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 304) {
+                        resolve(sortingData(xhr.response, params));
+                    } else {
+                        reject(xhr);
+                    }
+                };
+
+                xhr.send();
+            });
+        };
 
         function query(date) {
             document.querySelector('table').GM({
                 gridManagerName: 'djeva',
-                ajaxData: 'json/' + date + '.json',
+                ajaxData: function (settings, params) {
+                    return getDJEvaList(params, 'json/' + date + '.json');
+                },
                 responseHandler: function (response) {
                     document.title = 'DJEVA ' + response[0]['date'];
                     response = {
@@ -205,6 +272,7 @@
                             let content = row['name'] + ' (' + cell + ')';
                             return '<a class="code_link" href="' + link + '">' + content + '</a>';
                         },
+                        sorting: '',
                     }, {
                         key: 'eva_type',
                         text: '估值',
@@ -217,39 +285,47 @@
                             };
                             return eva_type[cell];
                         },
+                        sorting: '',
                     }, {
                         key: 'pe',
                         text: 'PE',
+                        sorting: '',
                     }, {
                         key: 'pe_percentile',
                         text: 'PE百分位',
                         template: function (cell, row, index, key) {
                             return (cell * 100).toFixed(2) + '%';
                         },
+                        sorting: '',
                     }, {
                         key: 'pb',
                         text: 'PB',
+                        sorting: '',
                     }, {
                         key: 'pb_percentile',
                         text: 'PB百分位',
                         template: function (cell, row, index, key) {
                             return (cell * 100).toFixed(2) + '%';
                         },
+                        sorting: '',
                     }, {
                         key: 'roe',
                         text: 'ROE',
                         template: function (cell, row, index, key) {
                             return (cell * 100).toFixed(2) + '%';
                         },
+                        sorting: '',
                     }, {
                         key: 'yeild',
                         text: '股息率',
                         template: function (cell, row, index, key) {
                             return (cell * 100).toFixed(2) + '%';
                         },
+                        sorting: '',
                     }, {
                         key: 'peg',
                         text: '预测PEG',
+                        sorting: '',
                     },
                 ]
             });
