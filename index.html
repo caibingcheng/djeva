@@ -56,15 +56,14 @@
     }
 
     input[type='button'] {
-        display: none;
+        display: inline-block;
         color: black;
-        font-size: 12px;
+        font-size: 16px;
         background: #e8e8e8;
         border: 2px solid #e8e8e8;
         border-radius: 6px;
         padding: 4px 16px;
         text-align: center;
-        /*  display: inline-block; */
         -webkit-transition-duration: 0.4s;
         /* Safari */
         transition-duration: 0.4s;
@@ -91,10 +90,112 @@
         width: 100%;
         padding: 0 0;
         margin: 0 0;
+        position: relative;
     }
 
     main {
         height: 100%;
+    }
+
+    #selected_date {
+        margin-left: 8px;
+        font-weight: bolder;
+    }
+
+    .date-picker {
+        position: absolute;
+        top: 48px;
+        left: 0;
+        background: #e8e8e8;
+        border: 2px solid #e8e8e8;
+        border-radius: 6px;
+        padding: 8px;
+        display: none;
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .date-picker.show {
+        display: block;
+    }
+
+    .date-picker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+
+    .date-picker-title {
+        font-weight: bolder;
+    }
+
+    .date-picker-nav {
+        background: #e8e8e8;
+        border: 2px solid #e8e8e8;
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 24px;
+    }
+
+    .date-picker-nav:disabled {
+        color: #9b9b9b;
+        cursor: not-allowed;
+    }
+
+    .date-picker-weekdays,
+    .date-picker-days {
+        display: grid;
+        grid-template-columns: repeat(7, 32px);
+        gap: 4px;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .date-picker-weekdays {
+        font-size: 12px;
+        color: #7a7a7a;
+        margin-bottom: 4px;
+    }
+
+    .date-picker-day,
+    .date-picker-empty {
+        width: 32px;
+        height: 28px;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .date-picker-day {
+        border: 1px solid #e0e0e0;
+        background: #f8f8f8;
+        cursor: pointer;
+    }
+
+    .date-picker-day:hover {
+        border-color: #008CBA;
+    }
+
+    .date-picker-day.selected {
+        background: #008CBA;
+        color: white;
+        border-color: #008CBA;
+    }
+
+    .date-picker-day:disabled {
+        background: #f0f0f0;
+        color: #9b9b9b;
+        cursor: not-allowed;
+        border-color: #e0e0e0;
+    }
+
+    .date-picker-empty {
+        border: 1px solid transparent;
+        background: transparent;
     }
 
     footer {
@@ -109,12 +210,26 @@
 
 <body>
     <header>
-        <select name="trading_year" id="trading_year"></select> 年
-        <select name="trading_month" id="trading_month"></select> 月
-        <select name="trading_day" id="trading_day"></select> 日
+        <input type="button" id="date_picker_button" value="选择日期">
+        <span id="selected_date"></span>
         <span id="trading_week"></span>
-        &nbsp;&nbsp;
-        <input type="button" value="查询">
+        <div id="date_picker" class="date-picker">
+            <div class="date-picker-header">
+                <button type="button" id="date_picker_prev" class="date-picker-nav">‹</button>
+                <span id="date_picker_title" class="date-picker-title"></span>
+                <button type="button" id="date_picker_next" class="date-picker-nav">›</button>
+            </div>
+            <div class="date-picker-weekdays">
+                <span>一</span>
+                <span>二</span>
+                <span>三</span>
+                <span>四</span>
+                <span>五</span>
+                <span>六</span>
+                <span>日</span>
+            </div>
+            <div id="date_picker_days" class="date-picker-days"></div>
+        </div>
     </header>
     <main>
         <table></table>
@@ -127,11 +242,14 @@
     <script type="text/javascript" src="djeva.js"></script>
     <script>
         var djeva = get_djeva();
-        let year_obj = document.querySelector("#trading_year");
-        let month_obj = document.querySelector("#trading_month");
-        let day_obj = document.querySelector("#trading_day");
         let week_obj = document.querySelector("#trading_week");
-        let submit_obj = document.querySelector("input[type=button]");
+        let selected_date_obj = document.querySelector("#selected_date");
+        let date_picker = document.querySelector("#date_picker");
+        let date_picker_button = document.querySelector("#date_picker_button");
+        let date_picker_title = document.querySelector("#date_picker_title");
+        let date_picker_days = document.querySelector("#date_picker_days");
+        let date_picker_prev = document.querySelector("#date_picker_prev");
+        let date_picker_next = document.querySelector("#date_picker_next");
 
         function setDataList(id, datalist) {
             let dl = document.getElementById(id);
@@ -151,28 +269,76 @@
             });
         }
 
-        function year_select() {
-            let year = year_obj.value;
-            let month = Object.keys(djeva['data'][year]);
-            month = sortByKey(month).reverse();
-            setDataList('trading_month', month);
-            month_obj.options[0].selected = true;
-            month_obj.onchange();
+        function padDate(value) {
+            return String(value).padStart(2, '0');
         }
-        function month_select() {
-            let year = year_obj.value;
-            let month = month_obj.value;
-            let day = djeva['data'][year][month];
-            day = sortByKey(day).reverse();
-            setDataList('trading_day', day);
-            day_obj.options[0].selected = true;
-            day_obj.onchange();
-        };
-        function day_select() {
-            let year = parseInt(year_obj.value);
-            let month = parseInt(month_obj.value);
-            let day = parseInt(day_obj.value);
-            let date = new Date(year, month - 1, day);
+
+        function formatDate(year, month, day) {
+            return year + '-' + month + '-' + day;
+        }
+
+        function isDataAvailable(year, month, day) {
+            if (!djeva['data'][year] || !djeva['data'][year][month]) {
+                return false;
+            }
+            return djeva['data'][year][month].includes(day);
+        }
+
+        function getMonthRange() {
+            let minValue = null;
+            let maxValue = null;
+            Object.keys(djeva['data']).forEach((year) => {
+                Object.keys(djeva['data'][year]).forEach((month) => {
+                    let value = parseInt(year) * 12 + parseInt(month);
+                    if (minValue === null || value < minValue) {
+                        minValue = value;
+                    }
+                    if (maxValue === null || value > maxValue) {
+                        maxValue = value;
+                    }
+                });
+            });
+            return {
+                min: minValue,
+                max: maxValue
+            };
+        }
+
+        function getLatestDate() {
+            let latestValue = -1;
+            let latestDate = {
+                year: "",
+                month: "",
+                day: ""
+            };
+            Object.keys(djeva['data']).forEach((year) => {
+                Object.keys(djeva['data'][year]).forEach((month) => {
+                    djeva['data'][year][month].forEach((day) => {
+                        let value = parseInt(year) * 10000 + parseInt(month) * 100 + parseInt(day);
+                        if (value > latestValue) {
+                            latestValue = value;
+                            latestDate = {
+                                year: year,
+                                month: month,
+                                day: day
+                            };
+                        }
+                    });
+                });
+            });
+            return latestDate;
+        }
+
+        let monthRange = getMonthRange();
+        let latestDate = getLatestDate();
+        let selectedYear = latestDate.year;
+        let selectedMonth = latestDate.month;
+        let selectedDay = latestDate.day;
+        let currentYear = selectedYear;
+        let currentMonth = selectedMonth;
+
+        function updateWeekday() {
+            let date = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, parseInt(selectedDay));
             let week = {
                 0: "星期天",
                 1: "星期一",
@@ -183,24 +349,109 @@
                 6: "星期六",
             };
             week_obj.innerHTML = ' · ' + week[date.getDay()];
-            submit_obj.click();
-        };
-
-        year_obj.onchange = year_select;
-        month_obj.onchange = month_select;
-        day_obj.onchange = day_select;
-        submit_obj.onclick = function () {
-            let year = year_obj.value;
-            let month = month_obj.value;
-            let day = day_obj.value;
-            query(year + '-' + month + '-' + day);
         }
 
-        let years = Object.keys(djeva['data']);
-        years = sortByKey(years).reverse();
-        setDataList('trading_year', years);
-        year_obj.options[0].selected = true;
-        year_obj.onchange();
+        function updateSelectedLabel() {
+            selected_date_obj.innerHTML = formatDate(selectedYear, selectedMonth, selectedDay);
+        }
+
+        function setSelectedDate(year, month, day) {
+            selectedYear = year;
+            selectedMonth = month;
+            selectedDay = day;
+            currentYear = year;
+            currentMonth = month;
+            updateSelectedLabel();
+            updateWeekday();
+            query(formatDate(selectedYear, selectedMonth, selectedDay));
+        }
+
+        function renderCalendar() {
+            let yearValue = parseInt(currentYear);
+            let monthValue = parseInt(currentMonth);
+            let daysInMonth = new Date(yearValue, monthValue, 0).getDate();
+            let firstDayIndex = (new Date(yearValue, monthValue - 1, 1).getDay() + 6) % 7;
+            date_picker_title.innerHTML = currentYear + ' 年 ' + monthValue + ' 月';
+            date_picker_days.innerHTML = "";
+
+            for (let index = 0; index < firstDayIndex; index++) {
+                let emptySlot = document.createElement('div');
+                emptySlot.className = 'date-picker-empty';
+                date_picker_days.appendChild(emptySlot);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                let dayValue = padDate(day);
+                let dayButton = document.createElement('button');
+                dayButton.type = 'button';
+                dayButton.className = 'date-picker-day';
+                dayButton.textContent = day;
+                if (!isDataAvailable(currentYear, currentMonth, dayValue)) {
+                    dayButton.disabled = true;
+                }
+                if (currentYear === selectedYear && currentMonth === selectedMonth && dayValue === selectedDay) {
+                    dayButton.classList.add('selected');
+                }
+                dayButton.onclick = function () {
+                    if (dayButton.disabled) {
+                        return;
+                    }
+                    setSelectedDate(currentYear, currentMonth, dayValue);
+                    date_picker.classList.remove('show');
+                    renderCalendar();
+                };
+                date_picker_days.appendChild(dayButton);
+            }
+
+            let currentValue = yearValue * 12 + monthValue;
+            date_picker_prev.disabled = currentValue <= monthRange.min;
+            date_picker_next.disabled = currentValue >= monthRange.max;
+        }
+
+        function shiftMonth(step) {
+            let yearValue = parseInt(currentYear);
+            let monthValue = parseInt(currentMonth) + step;
+            if (monthValue === 0) {
+                monthValue = 12;
+                yearValue -= 1;
+            } else if (monthValue === 13) {
+                monthValue = 1;
+                yearValue += 1;
+            }
+            let newValue = yearValue * 12 + monthValue;
+            if (newValue < monthRange.min || newValue > monthRange.max) {
+                return;
+            }
+            currentYear = String(yearValue);
+            currentMonth = padDate(monthValue);
+            renderCalendar();
+        }
+
+        date_picker_button.onclick = function (event) {
+            event.stopPropagation();
+            date_picker.classList.toggle('show');
+        };
+
+        date_picker_prev.onclick = function (event) {
+            event.stopPropagation();
+            shiftMonth(-1);
+        };
+
+        date_picker_next.onclick = function (event) {
+            event.stopPropagation();
+            shiftMonth(1);
+        };
+
+        date_picker.onclick = function (event) {
+            event.stopPropagation();
+        };
+
+        document.addEventListener('click', function () {
+            date_picker.classList.remove('show');
+        });
+
+        setSelectedDate(selectedYear, selectedMonth, selectedDay);
+        renderCalendar();
 
         function sortingData(data, query) {
             let sortProps = "DESC";
