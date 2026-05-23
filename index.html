@@ -9,6 +9,7 @@
 
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="lib/gridmanager.css">
+    <link rel="stylesheet" href="lib/flatpickr.min.css">
     <script src="lib/gridmanager.js"></script>
 </head>
 
@@ -37,46 +38,55 @@
         font-weight: bolder;
     }
 
-    select {
+    .date-picker-wrapper {
+        display: inline-flex;
+        align-items: center;
+        background: #e8e8e8;
+        border: 2px solid #e8e8e8;
+        border-radius: 6px;
+        overflow: hidden;
+        vertical-align: middle;
+    }
+
+    #date_picker {
         color: black;
         font-size: 16px;
-        background: #e8e8e8;
-        border: 2px solid #e8e8e8;
-        border-radius: 6px;
-        padding: 4px 6px;
+        background: transparent;
+        border: none;
+        padding: 4px 10px;
         text-align: center;
-        display: inline-block;
         cursor: pointer;
-        text-decoration: none;
-        text-transform: uppercase;
         outline: none;
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
+        width: 120px;
     }
 
-    input[type='button'] {
-        display: none;
+    #btn_latest {
         color: black;
-        font-size: 12px;
-        background: #e8e8e8;
-        border: 2px solid #e8e8e8;
-        border-radius: 6px;
-        padding: 4px 16px;
-        text-align: center;
-        /*  display: inline-block; */
-        -webkit-transition-duration: 0.4s;
-        /* Safari */
-        transition-duration: 0.4s;
+        font-size: 16px;
+        background: transparent;
+        border: none;
+        border-left: 1px solid #ccc;
+        padding: 4px 10px;
         cursor: pointer;
-        text-decoration: none;
-        text-transform: uppercase;
+        outline: none;
     }
-
-    input[type='button']:hover {
-        border: 2px solid #008CBA;
+    #btn_latest:hover {
         background-color: #008CBA;
         color: white;
+    }
+
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange {
+        background: #008CBA;
+        border-color: #008CBA;
+    }
+
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.startRange:hover,
+    .flatpickr-day.endRange:hover {
+        background: #0077a3;
+        border-color: #0077a3;
     }
 
     .comment {
@@ -109,12 +119,11 @@
 
 <body>
     <header>
-        <select name="trading_year" id="trading_year"></select> 年
-        <select name="trading_month" id="trading_month"></select> 月
-        <select name="trading_day" id="trading_day"></select> 日
+        <div class="date-picker-wrapper">
+            <input type="text" id="date_picker" placeholder="选择日期" readonly>
+            <button id="btn_latest">最新</button>
+        </div>
         <span id="trading_week"></span>
-        &nbsp;&nbsp;
-        <input type="button" value="查询">
     </header>
     <main>
         <table></table>
@@ -123,23 +132,12 @@
         <p class="comment">重要提示：投资有风险，估值数据仅供参考，不构成任何投资建议。</p>
     </footer>
 
-
     <script type="text/javascript" src="djeva.js"></script>
+    <script src="lib/flatpickr.min.js"></script>
+    <script src="lib/flatpickr.zh.js"></script>
     <script>
         var djeva = get_djeva();
-        let year_obj = document.querySelector("#trading_year");
-        let month_obj = document.querySelector("#trading_month");
-        let day_obj = document.querySelector("#trading_day");
         let week_obj = document.querySelector("#trading_week");
-        let submit_obj = document.querySelector("input[type=button]");
-
-        function setDataList(id, datalist) {
-            let dl = document.getElementById(id);
-            dl.innerHTML = "";
-            for (var index in datalist) {
-                dl.add(new Option(datalist[index], datalist[index]));
-            }
-        }
 
         function sortByKey(arr, key = "") {
             if (typeof (arr) == "string")
@@ -151,27 +149,23 @@
             });
         }
 
-        function year_select() {
-            let year = year_obj.value;
-            let month = Object.keys(djeva['data'][year]);
-            month = sortByKey(month).reverse();
-            setDataList('trading_month', month);
-            month_obj.options[0].selected = true;
-            month_obj.onchange();
+        // 构建可用日期数组
+        let availableDates = [];
+        for (let year in djeva.data) {
+            for (let month in djeva.data[year]) {
+                for (let day of djeva.data[year][month]) {
+                    availableDates.push(year + '-' + month + '-' + day);
+                }
+            }
         }
-        function month_select() {
-            let year = year_obj.value;
-            let month = month_obj.value;
-            let day = djeva['data'][year][month];
-            day = sortByKey(day).reverse();
-            setDataList('trading_day', day);
-            day_obj.options[0].selected = true;
-            day_obj.onchange();
-        };
-        function day_select() {
-            let year = parseInt(year_obj.value);
-            let month = parseInt(month_obj.value);
-            let day = parseInt(day_obj.value);
+        availableDates = sortByKey(availableDates);
+        let latestDate = availableDates[availableDates.length - 1];
+
+        function onDateChange(dateStr) {
+            let parts = dateStr.split('-');
+            let year = parseInt(parts[0]);
+            let month = parseInt(parts[1]);
+            let day = parseInt(parts[2]);
             let date = new Date(year, month - 1, day);
             let week = {
                 0: "星期天",
@@ -183,24 +177,27 @@
                 6: "星期六",
             };
             week_obj.innerHTML = ' · ' + week[date.getDay()];
-            submit_obj.click();
-        };
-
-        year_obj.onchange = year_select;
-        month_obj.onchange = month_select;
-        day_obj.onchange = day_select;
-        submit_obj.onclick = function () {
-            let year = year_obj.value;
-            let month = month_obj.value;
-            let day = day_obj.value;
-            query(year + '-' + month + '-' + day);
+            query(dateStr);
         }
 
-        let years = Object.keys(djeva['data']);
-        years = sortByKey(years).reverse();
-        setDataList('trading_year', years);
-        year_obj.options[0].selected = true;
-        year_obj.onchange();
+        flatpickr.localize(flatpickr.l10ns.zh);
+        flatpickr("#date_picker", {
+            enable: availableDates,
+            dateFormat: "Y-m-d",
+            defaultDate: latestDate,
+            onChange: function (selectedDates, dateStr) {
+                onDateChange(dateStr);
+            }
+        });
+
+        document.querySelector("#btn_latest").onclick = function() {
+            let fp = document.querySelector("#date_picker")._flatpickr;
+            fp.setDate(latestDate);
+            onDateChange(latestDate);
+        };
+
+        // 初始化加载最新数据
+        onDateChange(latestDate);
 
         function sortingData(data, query) {
             let sortProps = "DESC";
