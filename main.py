@@ -106,7 +106,7 @@ class Djeva():
     def _dump_csv(self, filename, data):
         filename = filename + '.csv'
         df = pandas.DataFrame(data)[self._csv_columns]
-        df = df.sort_values(by='id').reset_index(drop=True)
+        df = df.sort_values(by='index_code').reset_index(drop=True)
         df.to_csv(filename, index=None)
         return filename
 
